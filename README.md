@@ -38,3 +38,50 @@ Grounded-SLAM/
 
 python tests/test_pipeline.py
 
+
+git clone https://github.com/IDEA-Research/GroundingDINO.git
+cd GroundingDINO
+
+python3 -m venv groundingdino_env
+source groundingdino_env/bin/activate
+
+pip install --upgrade pip
+pip install --default-timeout=120 scipy supervision addict timm transformers yapf opencv-python pycocotools --no-cache-dir
+
+pip install -e .
+
+cd ~
+git clone https://github.com/IntelRealSense/librealsense.git
+cd librealsense
+mkdir build && cd build
+cmake .. -DBUILD_PYTHON_BINDINGS=ON -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+sudo make install
+
+sudo apt install librealsense2-dev librealsense2-utils
+
+realsense-viewer
+
+mkdir weights
+wget https://github.com/IDEA-Research/GroundingDINO/releases/download/0.1.0/groundingdino_swint_ogc.pth -P weights/
+
+python demo/inference_on_a_image.py \
+  -c groundingdino/config/GroundingDINO_SwinT_OGC.py \
+  -p weights/groundingdino_swint_ogc.pth \
+  -i demo/demo.jpg \
+  -o outputs/ \
+  -t "a dog" \
+  --cpu-only
+
+
+source groundingdino_env/bin/activate
+python dino_realsense_stream.py
+
+rs-enumerate-devices
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+
+
+
+
