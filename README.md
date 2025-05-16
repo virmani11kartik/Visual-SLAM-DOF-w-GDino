@@ -181,10 +181,12 @@ slam_ws/
                 └── RealSense_D435i.yaml
 ```
 ### ORB SLAM WITHOUT DINO FILTER
-/run/user/1000/gvfs/google-drive:host=gmail.com,user=kartikddn11/0AJvaSCO88apsUk9PVA/1OTU1UCyZIxNxbdWDMWM9G9pC0eS2a5qj/1MP-705MgI33oNF0fM6oCHizbvkR0II89
+![paach_15_OS2](https://github.com/user-attachments/assets/f5215ce9-451f-4f21-8254-f2e76264c7e0)
+
 
 ### ORB SLAM WITH DINO FILTER
-/run/user/1000/gvfs/google-drive:host=gmail.com,user=kartikddn11/0AJvaSCO88apsUk9PVA/1OTU1UCyZIxNxbdWDMWM9G9pC0eS2a5qj/1JxrFfKzSTo9Pyqm9ZD4CyBxDL7srcVy9
+![paach_15_OS2_DOF](https://github.com/user-attachments/assets/f1e8c7b4-fd02-46bf-9a30-578ad57ee733)
+
 
 ### Refrences
 GroundingDINO
