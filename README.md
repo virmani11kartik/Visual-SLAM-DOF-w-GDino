@@ -15,19 +15,29 @@
 
 ### 1. Clone the repository with submodules
 
-import os
-
-readme_content = """
 # Grounded-SLAM: A Framework Integrating Grounding DINO + SAM with ORB-SLAM2 and ORB-SLAM3
 
 This repository provides a modular setup to run dynamic object filtering with Grounding DINO + Segment Anything Model (SAM), and visualize the results with ORB-SLAM2 and ORB-SLAM3 SLAM backends. It supports integration with RealSense cameras and ROS (Noetic) using Pangolin viewer.
 
 ---
 
-## 🧱 Repository Structure
+## Repository Structure
+dino_ws/
+├── src/
+│ ├── gdino_filter/ # ROS package using Grounding DINO + SAM
+│ ├── ORB_SLAM2_NOETIC/ # ROS-compatible fork of ORB-SLAM2
+│ ├── orbslam3_ros/ # ROS wrapper for ORB-SLAM3 (custom)
+├── vision_models/ # Contains Grounding DINO and SAM model codebases
 
+## System Requirements
 
-```
+- Ubuntu 20.04 or later
+- ROS Noetic
+- Python 3.10 (for Grounding DINO + SAM)
+- Python 3.8 (for ROS nodes)
+- CUDA-compatible GPU + NVIDIA drivers
+- RealSense D435i (or compatible RGB-D camera)
+  
 ### 2. Python environment setup
 
 ```bash
@@ -88,19 +98,40 @@ cd ORB_SLAM3
 ```
 ### 2. Install Pangolin (compatible version)
 ```bash
+sudo apt install libglew-dev libboost-dev libboost-thread-dev libboost-filesystem-dev
 git clone https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin
-git checkout 86eb4975fc4fc8b5d92148c2e370045ae9bf9f5d
 mkdir build && cd build
 cmake ..
-cmake --build .
+make -j$(nproc)
 sudo make install
+
+# Download OpenCV 4.5.5 source
+wget -O opencv.zip https://github.com/opencv/opencv/archive/4.5.5.zip
+unzip opencv.zip && cd opencv-4.5.5
+mkdir build && cd build
+
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local ..
+make -j$(nproc)
+sudo make install
+
 ```
-### 3. Build ORB-SLAM3
+### 3. Build ORB-SLAM2/3
+
 ```bash
-cd ~/slam_ws/src/ORB_SLAM3
+cd ~/dino_ws/src/ORB_SLAM2_NOETIC
 chmod +x build.sh
 ./build.sh
+cd ~/dino_ws
+catkin_make
+```
+
+```bash
+cd ~/dino_ws/src/orbslam3_ros/ORB_SLAM3
+chmod +x build.sh
+./build.sh
+cd ~/dino_ws
+catkin_make
 ```
 ### 4. Run Stereo-Inertial D435i example
 ```bash
