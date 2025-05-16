@@ -1,4 +1,4 @@
-# Grounded-SLAM
+# Visual-SLAM-DOF-w-GDino
 
 **Grounded-SLAM** is a modular system that integrates visual grounding and simultaneous localization and mapping (SLAM) using cutting-edge object detection and language grounding models. This repository leverages [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) for zero-shot object grounding.
 
@@ -15,10 +15,18 @@
 
 ### 1. Clone the repository with submodules
 
-```bash
-git clone --recurse-submodules https://github.com/your-username/Grounded-SLAM.git
-cd Grounded-SLAM
-git submodule update --init --recursive
+import os
+
+readme_content = """
+# Grounded-SLAM: A Framework Integrating Grounding DINO + SAM with ORB-SLAM2 and ORB-SLAM3
+
+This repository provides a modular setup to run dynamic object filtering with Grounding DINO + Segment Anything Model (SAM), and visualize the results with ORB-SLAM2 and ORB-SLAM3 SLAM backends. It supports integration with RealSense cameras and ROS (Noetic) using Pangolin viewer.
+
+---
+
+## 🧱 Repository Structure
+
+
 ```
 ### 2. Python environment setup
 
