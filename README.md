@@ -217,6 +217,32 @@ slam_ws/
 #### PROMPT : Person and Shoe
 ![Screenshot from 2025-05-15 22-42-54](https://github.com/user-attachments/assets/39eeb20f-d8dc-4e09-a23e-f1fc0d7b1fdf)
 
+### VIRTUAL MACHINE (DOCKER tar file LINK to our workspace container ~ 35GB)
+https://penno365-my.sharepoint.com/:f:/g/personal/kvirmani_upenn_edu/EkN-WdZKPuxDgfVWjlj8ipYBCS_OmEIqmtbfpMQv_QfF6A?e=bfIoIN
+
+#### DOCKER SPECS
+UBUNTU 20.04
+NVIDIA TOOLKIT for CUDA 12.1
+PYTORCH 2.7 CUDA 12.1
+OPEN-CV 4.5.5
+ROS NOETIC
+MUST install pyrealsense.
+* ENTER CONTAINER WITH USB, GPU AND DISPLAY PERMISSIONS
+```bash
+xhost +local:root  # Allow root (Docker) to access X server
+
+docker run -it --rm \
+  --gpus all \
+  --privileged \
+  --net=host \
+  --env="DISPLAY=$DISPLAY" \
+  --env="QT_X11_NO_MITSHM=1" \
+  --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+  --volume="/dev:/dev" \
+  --device=/dev/dri \
+  --name gdino_gui_container \
+  gdino_gui_image_name
+```
 
 ### Refrences
 GroundingDINO
