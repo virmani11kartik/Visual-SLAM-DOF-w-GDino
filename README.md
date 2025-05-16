@@ -222,12 +222,19 @@ https://penno365-my.sharepoint.com/:f:/g/personal/kvirmani_upenn_edu/EkN-WdZKPux
 
 #### DOCKER SPECS
 UBUNTU 20.04
+
 NVIDIA TOOLKIT for CUDA 12.1
+
 PYTORCH 2.7 CUDA 12.1
+
 OPEN-CV 4.5.5
+
 ROS NOETIC
+
 MUST install pyrealsense.
+
 * ENTER CONTAINER WITH USB, GPU AND DISPLAY PERMISSIONS
+  
 ```bash
 xhost +local:root  # Allow root (Docker) to access X server
 
