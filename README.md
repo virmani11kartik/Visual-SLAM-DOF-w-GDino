@@ -180,12 +180,21 @@ slam_ws/
             └── Stereo-Inertial/
                 └── RealSense_D435i.yaml
 ```
+### MULTI TRACKER MODE
+![Screenshot from 2025-05-15 22-37-27](https://github.com/user-attachments/assets/33db865c-8fef-4f38-81c8-48ac65d7926d)
+
 ### ORB SLAM WITHOUT DINO FILTER
 ![paach_15_OS2](https://github.com/user-attachments/assets/f5215ce9-451f-4f21-8254-f2e76264c7e0)
 
-
 ### ORB SLAM WITH DINO FILTER
 ![paach_15_OS2_DOF](https://github.com/user-attachments/assets/f1e8c7b4-fd02-46bf-9a30-578ad57ee733)
+
+### SLAM DYAMIC OBJECT FILTER
+#### PROMPT : Persom
+![Screenshot from 2025-05-15 22-44-39](https://github.com/user-attachments/assets/892895a0-c664-4945-9140-f9e1f167253e)
+
+#### PROMPT : Person and Shoe
+![Screenshot from 2025-05-15 22-42-54](https://github.com/user-attachments/assets/39eeb20f-d8dc-4e09-a23e-f1fc0d7b1fdf)
 
 
 ### Refrences
