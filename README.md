@@ -211,7 +211,7 @@ slam_ws/
 ![paach_15_OS2_DOF](https://github.com/user-attachments/assets/f1e8c7b4-fd02-46bf-9a30-578ad57ee733)
 
 ### SLAM DYAMIC OBJECT FILTER
-#### PROMPT : Persom
+#### PROMPT : Person
 ![Screenshot from 2025-05-15 22-44-39](https://github.com/user-attachments/assets/892895a0-c664-4945-9140-f9e1f167253e)
 
 #### PROMPT : Person and Shoe
