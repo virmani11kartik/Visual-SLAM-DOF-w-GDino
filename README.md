@@ -22,12 +22,33 @@ This repository provides a modular setup to run dynamic object filtering with Gr
 ---
 
 ## Repository Structure
+```bash
 dino_ws/
 ├── src/
 │ ├── gdino_filter/ # ROS package using Grounding DINO + SAM
+      | ---scripts
+                 | --- filter_node.py
+      | ---utils
+                 | --- filter_node.py
+                 | ---gdino_inv_2.py
+                 | ---gdino_inv_3.py
+                 | ---gdino_kalman_multi_tracker.py
+                 | ---gdino_inv.py
+                 | ---gdino_kalman.py
+                 | ---gdino_live_KF.py
+                 | ---gdino_live_mask.py
+                 | ---live_gdino.py
 │ ├── ORB_SLAM2_NOETIC/ # ROS-compatible fork of ORB-SLAM2
+       | ---src
+                 | ---/ros_mono.cc
+                 | ---/ros_rgbd.cc
+                 | ---/ros_stereo.cc
 │ ├── orbslam3_ros/ # ROS wrapper for ORB-SLAM3 (custom)
+      | ---src
+                 | ---/mono_ros_node.cc
 ├── vision_models/ # Contains Grounding DINO and SAM model codebases
+
+```
 
 ## System Requirements
 
