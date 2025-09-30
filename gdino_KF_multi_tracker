@@ -1,0 +1,222 @@
+import pyrealsense2 as rs
+import cv2
+import torch
+import numpy as np
+from PIL import Image
+import threading
+from filterpy.kalman import KalmanFilter
+from scipy.optimize import linear_sum_assignment
+from torchvision.ops import box_convert
+
+from groundingdino.util.inference import load_model, predict
+import groundingdino.datasets.transforms as T
+from segment_anything import sam_model_registry, SamPredictor
+
+# ==== CONFIG ====
+CONFIG_PATH = "groundingdino/config/GroundingDINO_SwinT_OGC.py"
+WEIGHTS_PATH = "weights/groundingdino_swint_ogc.pth"
+SAM_CHECKPOINT = "weights/sam/sam_vit_b_01ec64.pth"
+TEXT_PROMPT = "a person"
+BOX_THRESHOLD = 0.3
+TEXT_THRESHOLD = 0.25
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# ==== Load Models ====
+gdino_model = load_model(CONFIG_PATH, WEIGHTS_PATH).to(device)
+sam = sam_model_registry["vit_b"](checkpoint=SAM_CHECKPOINT).to(device)
+sam_predictor = SamPredictor(sam)
+
+# ==== RealSense Setup ====
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+pipeline.start(config)
+
+# ==== Image Transform ====
+transform = T.Compose([
+    T.RandomResize([800], max_size=1333),
+    T.ToTensor(),
+    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+])
+
+# ==== Background Buffer ====
+background_buffer = None
+
+# ==== Kalman Tracker ====
+
+class KalmanBoxTracker:
+    count = 0
+    def __init__(self, bbox):
+        self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        self.kf.F = np.eye(7)
+        for i in range(4):
+            self.kf.F[i, i+3] = 1
+        self.kf.H = np.eye(4, 7)
+        self.kf.R[2:,2:] *= 10.
+        self.kf.P[4:, 4:] *= 1000.
+        self.kf.P *= 10.
+        self.kf.Q[-1, -1] *= 0.01
+        self.kf.Q[4:, 4:] *= 0.01
+        self.kf.x[:4] = self.convert_bbox_to_z(bbox)
+        self.id = KalmanBoxTracker.count
+        KalmanBoxTracker.count += 1
+        self.time_since_update = 0
+        self.hit_streak = 0
+        self.age = 0
+
+    def update(self, bbox):
+        self.time_since_update = 0
+        self.hit_streak += 1
+        self.kf.update(self.convert_bbox_to_z(bbox))
+
+    def predict(self):
+        self.kf.predict()
+        self.age += 1
+        self.time_since_update += 1
+        return self.convert_x_to_bbox(self.kf.x)
+
+    def convert_bbox_to_z(self, bbox):
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        x = bbox[0]
+        y = bbox[1]
+        return np.array([[x], [y], [x+w], [y+h]])
+
+    def convert_x_to_bbox(self, x):
+        return np.array([x[0], x[1], x[2], x[3]]).flatten()
+
+
+class Sort:
+    def __init__(self, max_age=5, min_hits=1):
+        self.trackers = []
+        self.max_age = max_age
+        self.min_hits = min_hits
+
+    def update(self, dets):
+        trks = np.array([trk.predict() for trk in self.trackers])
+        iou_matrix = np.zeros((len(dets), len(trks)))
+
+        for d, det in enumerate(dets):
+            for t, trk in enumerate(trks):
+                iou_matrix[d, t] = self.iou(det, trk)
+
+        matched_indices = linear_sum_assignment(-iou_matrix)
+        matched_indices = np.array(list(zip(*matched_indices)), dtype=int)
+        if matched_indices.size == 0:
+            matched_indices = np.empty((0, 2), dtype=int)
+
+        unmatched_dets = list(set(range(len(dets))) - set(matched_indices[:,0]))
+        unmatched_trks = list(set(range(len(trks))) - set(matched_indices[:,1]))
+
+        for m in matched_indices:
+            self.trackers[m[1]].update(dets[m[0]])
+
+        for i in unmatched_dets:
+            self.trackers.append(KalmanBoxTracker(dets[i]))
+
+        self.trackers = [t for t in self.trackers if t.time_since_update <= self.max_age]
+
+        return [t.predict() for t in self.trackers]
+
+    def iou(self, bb_test, bb_gt):
+        xx1 = np.maximum(bb_test[0], bb_gt[0])
+        yy1 = np.maximum(bb_test[1], bb_gt[1])
+        xx2 = np.minimum(bb_test[2], bb_gt[2])
+        yy2 = np.minimum(bb_test[3], bb_gt[3])
+        w = np.maximum(0., xx2 - xx1)
+        h = np.maximum(0., yy2 - yy1)
+        inter = w * h
+        area1 = (bb_test[2] - bb_test[0]) * (bb_test[3] - bb_test[1])
+        area2 = (bb_gt[2] - bb_gt[0]) * (bb_gt[3] - bb_gt[1])
+        return inter / (area1 + area2 - inter + 1e-5)
+
+# ==== Initialize Tracker ====
+tracker = Sort()
+
+# ==== Optional prompt thread ====
+def prompt_listener():
+    global TEXT_PROMPT
+    while True:
+        user_input = input("New prompt (or blank to skip): ").strip()
+        if user_input:
+            TEXT_PROMPT = user_input
+            print(f"[INFO] Updated prompt to: {TEXT_PROMPT}")
+
+threading.Thread(target=prompt_listener, daemon=True).start()
+
+# ==== Main Loop ====
+try:
+    while True:
+        frames = pipeline.wait_for_frames()
+        color_frame = frames.get_color_frame()
+        if not color_frame:
+            continue
+
+        frame = np.asanyarray(color_frame.get_data())
+        h, w, _ = frame.shape
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image_pil = Image.fromarray(frame_rgb)
+        transformed_image, _ = transform(image_pil, None)
+
+        # Run GroundingDINO
+        with torch.no_grad():
+            boxes, logits, phrases = predict(
+                model=gdino_model,
+                image=transformed_image.to(device),
+                caption=TEXT_PROMPT,
+                box_threshold=BOX_THRESHOLD,
+                text_threshold=TEXT_THRESHOLD,
+                device=str(device),
+            )
+
+        boxes_scaled = boxes * torch.tensor([w, h, w, h])
+        xyxy_boxes = box_convert(boxes_scaled, in_fmt="cxcywh", out_fmt="xyxy").cpu().numpy()
+
+        # Update tracker
+        tracked_boxes = tracker.update(xyxy_boxes)
+
+        # Segment and build mask
+        sam_predictor.set_image(frame_rgb)
+        mask_union = np.zeros((h, w), dtype=np.uint8)
+
+        for box in tracked_boxes:
+            box = box.astype(int)
+            box[0] = max(0, box[0] - 10)
+            box[1] = max(0, box[1] - 10)
+            box[2] = min(w, box[2] + 10)
+            box[3] = min(h, box[3] + 10)
+            masks, _, _ = sam_predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=box[None, :],
+                multimask_output=False,
+            )
+            mask_union = np.maximum(mask_union, masks[0].astype(np.uint8))
+
+        # Initialize background buffer
+        if background_buffer is None:
+            background_buffer = np.zeros_like(frame)
+
+        background_buffer[mask_union == 0] = frame[mask_union == 0]
+        invisible_frame = frame.copy()
+        unknown_mask = np.all(background_buffer == 0, axis=2)
+        mask_to_inpaint = np.logical_and(mask_union == 1, unknown_mask)
+
+        # Restore known background
+        invisible_frame[mask_union == 1] = background_buffer[mask_union == 1]
+
+        if np.any(mask_to_inpaint):
+            kernel = np.ones((15, 15), np.uint8)
+            dilated_mask = cv2.dilate(mask_to_inpaint.astype(np.uint8)*255, kernel, iterations=2)
+            invisible_frame = cv2.inpaint(invisible_frame, dilated_mask, 5, cv2.INPAINT_TELEA)
+
+        # Show views
+        cv2.imshow("Original", frame)
+        cv2.imshow("Invisible View", invisible_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+finally:
+    pipeline.stop()
+    cv2.destroyAllWindows()
