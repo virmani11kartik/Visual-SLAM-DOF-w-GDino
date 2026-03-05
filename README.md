@@ -1,5 +1,9 @@
 # Visual-SLAM-DOF-w-GDino
 
+### Demo
+
+![Demo](demo.gif)
+
 **Grounded-SLAM** is a modular system that integrates visual grounding and simultaneous localization and mapping (SLAM) using cutting-edge object detection and language grounding models. This repository leverages [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) for zero-shot object grounding.
 
 ## Features
